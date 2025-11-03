@@ -65,6 +65,39 @@ or
 bash mac-cache-manager.sh -a
 ```
 
+### Ignore Specific Cache Types
+
+Skip calculation and display of specific cache types:
+
+```bash
+# Ignore a single type
+bash mac-cache-manager.sh --ignore DEV
+
+# Ignore multiple types (method 1)
+bash mac-cache-manager.sh -i DEV -i SYSTEM
+
+# Ignore multiple types (method 2 - comma-separated)
+bash mac-cache-manager.sh -i DEV,ANDROID,USER
+
+# Combine with accurate mode
+bash mac-cache-manager.sh --accurate --ignore DEV
+```
+
+**Valid cache types:** `USER`, `DEV`, `SYSTEM`, `TEMP`, `ANDROID`
+
+This is useful when you want to:
+- Focus on specific cache categories
+- Speed up scanning by excluding large folders
+- Avoid accidentally deleting certain cache types
+
+## Command-Line Options
+
+- `-h`, `--help` - Show help message
+- `-a`, `--accurate` - Use accurate mode for precise size calculation (slower)
+- `-i`, `--ignore TYPE` - Ignore specific cache type(s) from calculation
+  - Can be specified multiple times or comma-separated
+  - Valid types: `USER`, `DEV`, `SYSTEM`, `TEMP`, `ANDROID`
+
 ## How It Works
 
 ### 1. Scanning Phase
@@ -119,6 +152,7 @@ This tool scans and helps you clean cache folders on your Mac.
   ● ANDROID → Android Studio build folders
 
 ⚡ Fast Mode: Quick size estimation (use --accurate flag for precise sizes)
+🚫 Ignoring cache types: DEV ANDROID
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -140,16 +174,20 @@ No. Folder                                                                      
 A) Delete ALL (76.5G)
 1-28) Delete specific folder by number
 U) Delete USER caches (21.6G)
-D) Delete DEV caches (38.2G)
 S) Delete SYSTEM caches (3.6G)
 T) Delete TEMP caches (1.7G)
-N) Delete ANDROID caches (8.8G)
 Q) Quit
 
-Choose an option (A/U/D/S/T/N/1-28/Q):
+Choose an option (A/1-28/U/S/T/Q):
 ```
 
 ### Example Workflows
+
+#### Ignore Development Caches
+```bash
+bash mac-cache-manager.sh --ignore DEV
+# Only shows USER, SYSTEM, TEMP, and ANDROID caches
+```
 
 #### Clean All User Caches
 ```bash
@@ -177,36 +215,39 @@ bash mac-cache-manager.sh
 The tool scans the following locations:
 
 ### USER Caches
-- `~/Library/Caches/*`
-- `~/Library/Containers`
-- `~/.cache`
-- `~/.npm`
-- `~/.gem`
-- `~/.composer/cache`
+- `~/Library/Caches/*` (including browsers, Homebrew, etc.)
+- `~/.cache` (generic cache folder)
+- `~/.npm` (Node Package Manager cache)
+- `~/.composer/cache` (PHP Composer cache)
+- `~/.node-gyp` (Node native addons cache)
 - Browser caches (Chrome, Safari, Firefox)
-- Homebrew cache
 
 ### DEV Caches
-- `~/Library/Developer/Xcode/DerivedData`
-- `~/Library/Developer/CoreSimulator`
-- `~/.gradle/caches`
-- `~/.m2/repository`
-- `~/Library/Application Support/Code/Cache` (VS Code)
-- `~/.cargo/registry` (Rust)
+- `~/Library/Developer/Xcode/DerivedData` (Xcode build data)
+- `~/Library/Developer/CoreSimulator` (iOS Simulator data)
+- `~/.gradle/caches` (Gradle build cache)
+- `~/Library/Application Support/Code/Cache` (VS Code caches)
+- `~/Library/Application Support/Cursor/Cache` (Cursor caches)
+- `~/Library/Caches/JetBrains` (JetBrains IDE caches)
+- `~/.cargo/registry` (Rust package cache)
+- `~/.cache/yarn` (Yarn package cache)
+- `~/.cache/pip` (Python package cache)
+- `~/Library/Caches/pypoetry` (Poetry cache)
 - Docker VM data
 - CocoaPods cache
 
 ### SYSTEM Caches
 - `/Library/Caches`
-- `/System/Library/Caches`
-- `/private/var/folders`
 - `/private/var/log`
+
+**Note:** System paths are limited to safer locations only.
 
 ### TEMP Files
 - `/tmp`
 - `/private/var/tmp`
 - `~/Library/Logs`
 - `/Library/Updates`
+- `~/Downloads/*.dmg` (disk image files)
 
 ### ANDROID Builds
 - `~/AndroidStudioProjects/*/build`
@@ -278,6 +319,23 @@ MIT License - feel free to use and modify
 - System caches may affect performance temporarily
 - Backup important data before bulk deletions
 - Don't delete caches of actively running applications
+
+⚠️ **Intentionally Excluded (contain settings/data, not just caches):**
+- `~/Library/Containers` - App sandboxed data
+- `~/Library/Group Containers` - Shared app data
+- `~/Library/Application Support/JetBrains` - IDE settings
+- `~/.vscode/extensions`, `~/.cursor/extensions` - Installed extensions
+- `~/.gem` - Installed Ruby gems
+- `~/.nvm` - Node.js version manager
+- `~/.pyenv` - Python version manager
+- `~/.conda`, `~/anaconda3`, `~/miniconda3` - Python environments
+- `~/.m2` - Maven dependencies (not cache)
+- `~/.swiftpm` - Swift Package Manager packages
+- `~/.cocoapods/repos` - CocoaPods specs repository
+- `~/.pub-cache` - Dart/Flutter packages
+- `/System/Library/Caches` - Critical system caches
+- `/private/var/folders` - System temporary files
+- `/Users/Shared` - Shared user data
 
 ## FAQ
 

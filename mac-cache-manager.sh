@@ -7,8 +7,11 @@ show_help() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -h, --help      Show this help message"
-    echo "  -a, --accurate  Use accurate mode for precise size calculation (slower)"
+    echo "  -h, --help              Show this help message"
+    echo "  -a, --accurate          Use accurate mode for precise size calculation (slower)"
+    echo "  -i, --ignore TYPE       Ignore specific cache type(s) from calculation"
+    echo "                          Can be specified multiple times or comma-separated"
+    echo "                          Valid types: USER, DEV, SYSTEM, TEMP, ANDROID"
     echo ""
     echo "Description:"
     echo "  This tool scans and helps you clean cache folders on your Mac."
@@ -21,18 +24,53 @@ show_help() {
     echo "    ANDROID → Android Studio build folders"
     echo ""
     echo "Examples:"
-    echo "  $0              # Run in fast mode (default)"
-    echo "  $0 --accurate   # Run with precise size calculation"
+    echo "  $0                      # Run in fast mode (default)"
+    echo "  $0 --accurate           # Run with precise size calculation"
+    echo "  $0 --ignore DEV         # Ignore DEV caches from calculation"
+    echo "  $0 -i DEV -i SYSTEM     # Ignore DEV and SYSTEM caches"
+    echo "  $0 -i DEV,ANDROID       # Ignore DEV and ANDROID caches (comma-separated)"
+    echo "  $0 -a -i DEV            # Accurate mode, ignoring DEV caches"
     exit 0
 }
 
 # Parse command line arguments
 FAST_MODE=true
-if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-    show_help
-elif [ "$1" = "--accurate" ] || [ "$1" = "-a" ]; then
-    FAST_MODE=false
-fi
+IGNORE_TYPES=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            show_help
+            ;;
+        -a|--accurate)
+            FAST_MODE=false
+            shift
+            ;;
+        -i|--ignore)
+            if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
+                # Split by comma and add to ignore array
+                IFS=',' read -ra TYPES <<< "$2"
+                for type in "${TYPES[@]}"; do
+                    type=$(echo "$type" | tr '[:lower:]' '[:upper:]' | xargs)  # Convert to uppercase and trim
+                    if [[ "$type" =~ ^(USER|DEV|SYSTEM|TEMP|ANDROID)$ ]]; then
+                        IGNORE_TYPES+=("$type")
+                    else
+                        echo "Warning: Invalid cache type '$type' ignored. Valid types: USER, DEV, SYSTEM, TEMP, ANDROID"
+                    fi
+                done
+                shift 2
+            else
+                echo "Error: --ignore requires a cache type argument"
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Error: Unknown option: $1"
+            echo "Use -h or --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 # ANSI color codes
 GREEN='\033[0;32m'   # User cache
@@ -61,6 +99,10 @@ if [ "$FAST_MODE" = true ]; then
 else
     printf "🎯 Accurate Mode: Precise size calculation (slower but exact)\n"
 fi
+
+if [ ${#IGNORE_TYPES[@]} -gt 0 ]; then
+    printf "🚫 Ignoring cache types: ${IGNORE_TYPES[*]}\n"
+fi
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
@@ -68,9 +110,29 @@ echo ""
 echo "🔍 Scanning for cache folders..."
 
 # Define all possible cache folders with type
+# Note: The following are intentionally excluded as they contain settings/data, not just caches:
+# - ~/Library/Containers (app data)
+# - ~/Library/Group Containers (shared app data)
+# - ~/Library/Application Support/JetBrains (IDE settings)
+# - ~/Library/Application Support/Zed (editor settings)
+# - ~/Library/Developer/Xcode/UserData (Xcode settings)
+# - ~/.vscode/extensions, ~/.cursor/extensions (installed extensions)
+# - ~/.gem (installed Ruby gems)
+# - ~/.nvm (Node.js version manager)
+# - ~/.pyenv (Python version manager)
+# - ~/.conda, ~/anaconda3, ~/miniconda3 (Python environments)
+# - ~/.swiftpm (Swift packages)
+# - ~/.cocoapods/repos (CocoaPods specs)
+# - ~/.yarn/global (global packages)
+# - ~/.stack (Haskell Stack)
+# - ~/.pub-cache (Dart/Flutter packages)
+# - ~/.m2 (Maven dependencies)
+# - ~/.config/uv, ~/.local/share/uv (UV package manager)
+# - /System/Library/Caches (critical system caches)
+# - /private/var/folders (system temp files)
+# - /Users/Shared (shared user data)
 CACHE_FOLDERS=(
     "$HOME/Library/Caches|USER"
-    "$HOME/Library/Containers|USER"
     "$HOME/Library/Caches/Firefox|USER"
     "$HOME/Library/Caches/Google/Chrome|USER"
     "$HOME/Library/Caches/com.apple.Safari|USER"
@@ -81,7 +143,6 @@ CACHE_FOLDERS=(
     "$HOME/.npm|USER"
     "$HOME/.cache/yarn|USER"
     "$HOME/.cache/pip|USER"
-    "$HOME/.gem|USER"
     "$HOME/.composer/cache|USER"
     "$HOME/.node-gyp|USER"
     "$HOME/.thumbnails|USER"
@@ -90,7 +151,6 @@ CACHE_FOLDERS=(
     "$HOME/Library/Developer/Xcode/DerivedData|DEV"
     "$HOME/Library/Developer/Xcode/Archives|DEV"
     "$HOME/Library/Developer/Xcode/DocumentationCache|DEV"
-    "$HOME/Library/Developer/Xcode/UserData|DEV"
     "$HOME/Library/Developer/CoreSimulator/Devices|DEV"
     "$HOME/Library/Developer/DeveloperDiskImages|DEV"
     "$HOME/Library/Developer/Xcode/iOS DeviceSupport|DEV"
@@ -109,7 +169,6 @@ CACHE_FOLDERS=(
     "$HOME/Library/Application Support/Code/CachedProfilesData|DEV"
     "$HOME/Library/Application Support/Code/GPUCache|DEV"
     "$HOME/Library/Application Support/Code/Code Cache|DEV"
-    "$HOME/.vscode/extensions|DEV"
     "$HOME/.vscode/cli|DEV"
 
     # Cursor
@@ -121,16 +180,12 @@ CACHE_FOLDERS=(
     "$HOME/Library/Application Support/Cursor/CachedProfilesData|DEV"
     "$HOME/Library/Application Support/Cursor/GPUCache|DEV"
     "$HOME/Library/Application Support/Cursor/Code Cache|DEV"
-    "$HOME/.cursor/extensions|DEV"
 
     # Zed
     "$HOME/Library/Caches/Zed|DEV"
-    "$HOME/Library/Application Support/Zed|DEV"
     "$HOME/Library/Application Support/Zed/node/cache|DEV"
-    "$HOME/.config/zed|DEV"
 
     # JetBrains IDEs (IntelliJ IDEA, Android Studio, etc.)
-    "$HOME/Library/Application Support/JetBrains|DEV"
     "$HOME/Library/Caches/JetBrains|DEV"
     "$HOME/Library/Logs/JetBrains|DEV"
 
@@ -143,18 +198,11 @@ CACHE_FOLDERS=(
     "$HOME/.gradle/caches|DEV"
     "$HOME/.gradle/wrapper|DEV"
 
-    # Maven
-    "$HOME/.m2|DEV"
-
     # CocoaPods
     "$HOME/Library/Caches/CocoaPods|DEV"
-    "$HOME/.cocoapods/repos|DEV"
 
     # Carthage
     "$HOME/Library/Caches/org.carthage.CarthageKit|DEV"
-
-    # Swift Package Manager
-    "$HOME/.swiftpm|DEV"
 
     # Rust/Cargo
     "$HOME/.cargo/registry|DEV"
@@ -165,37 +213,15 @@ CACHE_FOLDERS=(
 
     # Python
     "$HOME/Library/Caches/pypoetry|DEV"
-    "$HOME/Library/Application Support/pypoetry|DEV"
-    "$HOME/.pyenv/cache|DEV"
     "$HOME/.cache/uv|DEV"
-    "$HOME/.config/uv|DEV"
-    "$HOME/.local/share/uv|DEV"
-
-    # Ruby
-    "$HOME/.gem|DEV"
 
     # Node.js/JavaScript
-    "$HOME/.nvm|DEV"
     "$HOME/Library/pnpm/store|DEV"
     "$HOME/.cache/yarn|DEV"
     "$HOME/.yarn-cache|DEV"
-    "$HOME/.yarn/global|DEV"
 
     # Composer (PHP)
     "$HOME/.composer/cache|DEV"
-
-    # Conda
-    "$HOME/.conda|DEV"
-    "$HOME/anaconda3|DEV"
-    "$HOME/miniconda3|DEV"
-
-    # Haskell Stack
-    "$HOME/.stack|DEV"
-    "$HOME/.stack/snapshots|DEV"
-
-    # Pub (Dart/Flutter)
-    "$HOME/.pub-cache|DEV"
-    "$HOME/Library/Caches/flutter_engine|DEV"
 
     # Deno
     "$HOME/Library/Caches/deno|DEV"
@@ -206,17 +232,12 @@ CACHE_FOLDERS=(
     # Docker
     "$HOME/Library/Containers/com.docker.docker/Data/vms|DEV"
 
-    "$HOME/Library/Group Containers|DEV"
-
     "/Library/Caches|SYSTEM"
-    "/System/Library/Caches|SYSTEM"
-    "/private/var/folders|SYSTEM"
     "/private/var/log|SYSTEM"
 
     "/tmp|TEMP"
     "/private/var/tmp|TEMP"
     "/Library/Updates|TEMP"
-    "/Users/Shared|TEMP"
     "$HOME/Library/Logs|TEMP"
     "$HOME/Downloads/*.dmg|TEMP"
 )
@@ -242,7 +263,17 @@ for item in "${CACHE_FOLDERS[@]}"; do
     folder="${item%%|*}"
     type="${item##*|}"
     folder="${folder/#\~/$HOME}"
-    if [ -d "$folder" ]; then
+    
+    # Skip if this type is in the ignore list
+    skip=false
+    for ignore_type in "${IGNORE_TYPES[@]}"; do
+        if [ "$type" = "$ignore_type" ]; then
+            skip=true
+            break
+        fi
+    done
+    
+    if [ "$skip" = false ] && [ -d "$folder" ]; then
         EXISTING_FOLDERS+=("$folder")
         EXISTING_TYPES+=("$type")
     fi
@@ -291,7 +322,7 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
         *) color="$NC" ;;
     esac
     
-    # Print row with loading indicator (no newline yet)
+    # Print row with loading indicator on the same line (no newline)
     printf "%-3s %-80s ${color}%-10s${NC} %-10s\r" "$index" "$folder" "$type" "⏳⏳"
 
     if [ "$type" = "ANDROID" ]; then
@@ -368,8 +399,8 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
     FOLDERS_WITH_SIZE+=("$folder")
     FOLDERS_SIZE_HR+=("$size_hr")
     
-    # Update the line (overwrite loading indicator) and add newline
-    printf "\r\033[K%-3s %-80s ${color}%-10s${NC} %-10s\n" "$index" "$folder" "$type" "$size_hr"
+    # Clear entire line and print the final result with proper spacing
+    printf "\r%-3s %-80s ${color}%-10s${NC} %-10s\n" "$index" "$folder" "$type" "$size_hr"
     
     # Save to temp file for deletion menu
     echo "$folder|$type" >> /tmp/cache_list.txt
@@ -428,120 +459,185 @@ SYSTEM_HR=$(convert_size $SYSTEM_BYTES)
 TEMP_HR=$(convert_size $TEMP_BYTES)
 ANDROID_HR=$(convert_size $ANDROID_BYTES)
 
+# Helper function to check if a type is ignored
+is_type_ignored() {
+    local check_type=$1
+    for ignored in "${IGNORE_TYPES[@]}"; do
+        if [ "$check_type" = "$ignored" ]; then
+            return 0  # true, type is ignored
+        fi
+    done
+    return 1  # false, type is not ignored
+}
+
 # ─────────────── MENU ───────────────
 echo "A) Delete ALL ($TOTAL_HR)"
-echo "1-${#EXISTING_FOLDERS[@]}) Delete specific folder by number"
-printf -- "\033[0;32mU) Delete USER caches ($USER_HR)\033[0m\n"
-printf -- "\033[0;34mD) Delete DEV caches ($DEV_HR)\033[0m\n"
-printf -- "\033[0;31mS) Delete SYSTEM caches ($SYSTEM_HR)\033[0m\n"
-printf -- "\033[0;33mT) Delete TEMP caches ($TEMP_HR)\033[0m\n"
-printf -- "\033[0;35mN) Delete ANDROID caches ($ANDROID_HR)\033[0m\n"
+if [ ${#EXISTING_FOLDERS[@]} -gt 0 ]; then
+    echo "1-${#EXISTING_FOLDERS[@]}) Delete specific folder by number"
+fi
+
+# Only show menu options for non-ignored types
+if ! is_type_ignored "USER"; then
+    printf -- "\033[0;32mU) Delete USER caches ($USER_HR)\033[0m\n"
+fi
+if ! is_type_ignored "DEV"; then
+    printf -- "\033[0;34mD) Delete DEV caches ($DEV_HR)\033[0m\n"
+fi
+if ! is_type_ignored "SYSTEM"; then
+    printf -- "\033[0;31mS) Delete SYSTEM caches ($SYSTEM_HR)\033[0m\n"
+fi
+if ! is_type_ignored "TEMP"; then
+    printf -- "\033[0;33mT) Delete TEMP caches ($TEMP_HR)\033[0m\n"
+fi
+if ! is_type_ignored "ANDROID"; then
+    printf -- "\033[0;35mN) Delete ANDROID caches ($ANDROID_HR)\033[0m\n"
+fi
+
 echo "Q) Quit"
 echo ""
 
-# ─────────────── CLEANUP CHOICE ───────────────
-read -p "Choose an option (A/U/D/S/T/N/1-${#EXISTING_FOLDERS[@]}/Q): " choice
-
-# Handle empty input (just pressing Enter)
-if [ -z "$choice" ]; then
-    echo "👋 Exiting without deleting anything."
-    rm -f /tmp/cache_list.txt
-    exit 0
+# Build dynamic prompt based on available options
+PROMPT_OPTIONS="A"
+if [ ${#EXISTING_FOLDERS[@]} -gt 0 ]; then
+    PROMPT_OPTIONS="$PROMPT_OPTIONS/1-${#EXISTING_FOLDERS[@]}"
 fi
+if ! is_type_ignored "USER"; then
+    PROMPT_OPTIONS="$PROMPT_OPTIONS/U"
+fi
+if ! is_type_ignored "DEV"; then
+    PROMPT_OPTIONS="$PROMPT_OPTIONS/D"
+fi
+if ! is_type_ignored "SYSTEM"; then
+    PROMPT_OPTIONS="$PROMPT_OPTIONS/S"
+fi
+if ! is_type_ignored "TEMP"; then
+    PROMPT_OPTIONS="$PROMPT_OPTIONS/T"
+fi
+if ! is_type_ignored "ANDROID"; then
+    PROMPT_OPTIONS="$PROMPT_OPTIONS/N"
+fi
+PROMPT_OPTIONS="$PROMPT_OPTIONS/Q"
 
-case "$choice" in
-    [qQ])
+# ─────────────── CLEANUP CHOICE LOOP ───────────────
+while true; do
+    read -p "Choose an option ($PROMPT_OPTIONS): " choice
+
+    # Handle empty input (just pressing Enter)
+    if [ -z "$choice" ]; then
         echo "👋 Exiting without deleting anything."
-        ;;
-    [aA])
-        read -p "⚠️  Delete ALL listed cache folders? (y/N): " confirm_all
-        if [ "$confirm_all" = "y" ] || [ "$confirm_all" = "Y" ]; then
-            while IFS='|' read -r folder type; do
-                echo "Deleting $folder..."
-                sudo rm -rf "$folder"
-            done < /tmp/cache_list.txt
-            echo "✅ All cache folders deleted."
-        else
-            echo "❌ Cancelled."
-        fi
-        ;;
-    [uU]|[dD]|[sS]|[tT]|[nN])
-        case "$choice" in
-            [uU]) target="USER"; color="$GREEN" ;;
-            [dD]) target="DEV"; color="$BLUE" ;;
-            [sS]) target="SYSTEM"; color="$RED" ;;
-            [tT]) target="TEMP"; color="$YELLOW" ;;
-            [nN]) target="ANDROID"; color="$MAGENTA" ;;
-        esac
-        read -p "⚠️  Delete all $target caches? (y/N): " confirm_type
-        if [ "$confirm_type" = "y" ] || [ "$confirm_type" = "Y" ]; then
-            while IFS='|' read -r folder type; do
-                if [ "$type" = "$target" ]; then
-                    case "$type" in
-                        USER) color_code="\033[0;32m" ;;
-                        DEV) color_code="\033[0;34m" ;;
-                        SYSTEM) color_code="\033[0;31m" ;;
-                        TEMP) color_code="\033[0;33m" ;;
-                        ANDROID) color_code="\033[0;35m" ;;
-                        *) color_code="" ;;
-                    esac
-                    printf -- "Deleting ${color_code}%s\033[0m...\n" "$folder"
-                    if [ "$target" = "ANDROID" ]; then
+        rm -f /tmp/cache_list.txt
+        exit 0
+    fi
+
+    case "$choice" in
+        [qQ])
+            echo "👋 Exiting without deleting anything."
+            rm -f /tmp/cache_list.txt
+            exit 0
+            ;;
+        [aA])
+            read -p "⚠️  Delete ALL listed cache folders? (y/N): " confirm_all
+            if [ "$confirm_all" = "y" ] || [ "$confirm_all" = "Y" ]; then
+                while IFS='|' read -r folder type; do
+                    echo "Deleting $folder..."
+                    sudo rm -rf "$folder"
+                done < /tmp/cache_list.txt
+                echo "✅ All cache folders deleted."
+                echo ""
+            else
+                echo "❌ Cancelled."
+                echo ""
+            fi
+            ;;
+        [uU]|[dD]|[sS]|[tT]|[nN])
+            case "$choice" in
+                [uU]) target="USER"; color="$GREEN" ;;
+                [dD]) target="DEV"; color="$BLUE" ;;
+                [sS]) target="SYSTEM"; color="$RED" ;;
+                [tT]) target="TEMP"; color="$YELLOW" ;;
+                [nN]) target="ANDROID"; color="$MAGENTA" ;;
+            esac
+            
+            # Check if this type is ignored
+            if is_type_ignored "$target"; then
+                echo "❌ Cannot delete $target caches - this type is being ignored."
+                echo ""
+                continue
+            fi
+            
+            read -p "⚠️  Delete all $target caches? (y/N): " confirm_type
+            if [ "$confirm_type" = "y" ] || [ "$confirm_type" = "Y" ]; then
+                while IFS='|' read -r folder type; do
+                    if [ "$type" = "$target" ]; then
+                        case "$type" in
+                            USER) color_code="\033[0;32m" ;;
+                            DEV) color_code="\033[0;34m" ;;
+                            SYSTEM) color_code="\033[0;31m" ;;
+                            TEMP) color_code="\033[0;33m" ;;
+                            ANDROID) color_code="\033[0;35m" ;;
+                            *) color_code="" ;;
+                        esac
+                        printf -- "Deleting ${color_code}%s\033[0m...\n" "$folder"
+                        if [ "$target" = "ANDROID" ]; then
+                            # Delete all build folders in Android projects
+                            for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
+                                sudo rm -rf "$build_dir"
+                            done
+                        else
+                            sudo rm -rf "$folder"
+                        fi
+                    fi
+                done < /tmp/cache_list.txt
+                echo "✅ All $target caches deleted."
+                echo ""
+            else
+                echo "❌ Cancelled."
+                echo ""
+            fi
+            ;;
+        [0-9]*)
+            # Handle numeric input for deleting specific folder
+            if [ "$choice" -ge 1 ] && [ "$choice" -le "${#EXISTING_FOLDERS[@]}" ] 2>/dev/null; then
+                idx=$((choice - 1))
+                folder="${EXISTING_FOLDERS[$idx]}"
+                type="${EXISTING_TYPES[$idx]}"
+                
+                case "$type" in
+                    USER) color_code="\033[0;32m" ;;
+                    DEV) color_code="\033[0;34m" ;;
+                    SYSTEM) color_code="\033[0;31m" ;;
+                    TEMP) color_code="\033[0;33m" ;;
+                    ANDROID) color_code="\033[0;35m" ;;
+                    *) color_code="" ;;
+                esac
+                
+                printf -- "⚠️  Delete ${color_code}%s\033[0m? (y/N): " "$folder"
+                read confirm_single
+                if [ "$confirm_single" = "y" ] || [ "$confirm_single" = "Y" ]; then
+                    if [ "$type" = "ANDROID" ]; then
                         # Delete all build folders in Android projects
+                        printf -- "Deleting ${color_code}%s\033[0m (build folders)...\n" "$folder"
                         for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
                             sudo rm -rf "$build_dir"
                         done
                     else
+                        printf -- "Deleting ${color_code}%s\033[0m...\n" "$folder"
                         sudo rm -rf "$folder"
                     fi
-                fi
-            done < /tmp/cache_list.txt
-            echo "✅ All $target caches deleted."
-        else
-            echo "❌ Cancelled."
-        fi
-        ;;
-    [0-9]*)
-        # Handle numeric input for deleting specific folder
-        if [ "$choice" -ge 1 ] && [ "$choice" -le "${#EXISTING_FOLDERS[@]}" ] 2>/dev/null; then
-            idx=$((choice - 1))
-            folder="${EXISTING_FOLDERS[$idx]}"
-            type="${EXISTING_TYPES[$idx]}"
-            
-            case "$type" in
-                USER) color_code="\033[0;32m" ;;
-                DEV) color_code="\033[0;34m" ;;
-                SYSTEM) color_code="\033[0;31m" ;;
-                TEMP) color_code="\033[0;33m" ;;
-                ANDROID) color_code="\033[0;35m" ;;
-                *) color_code="" ;;
-            esac
-            
-            printf -- "⚠️  Delete ${color_code}%s\033[0m? (y/N): " "$folder"
-            read confirm_single
-            if [ "$confirm_single" = "y" ] || [ "$confirm_single" = "Y" ]; then
-                if [ "$type" = "ANDROID" ]; then
-                    # Delete all build folders in Android projects
-                    printf -- "Deleting ${color_code}%s\033[0m (build folders)...\n" "$folder"
-                    for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
-                        sudo rm -rf "$build_dir"
-                    done
+                    echo "✅ Deleted successfully."
+                    echo ""
                 else
-                    printf -- "Deleting ${color_code}%s\033[0m...\n" "$folder"
-                    sudo rm -rf "$folder"
+                    echo "❌ Cancelled."
+                    echo ""
                 fi
-                echo "✅ Deleted successfully."
             else
-                echo "❌ Cancelled."
+                echo "❌ Invalid folder number. Please choose between 1 and ${#EXISTING_FOLDERS[@]}."
+                echo ""
             fi
-        else
-            echo "❌ Invalid folder number. Please choose between 1 and ${#EXISTING_FOLDERS[@]}."
-        fi
-        ;;
-    *)
-        echo "❌ Invalid option."
-        ;;
-esac
-
-# Clean up temp file
-rm -f /tmp/cache_list.txt
+            ;;
+        *)
+            echo "❌ Invalid option."
+            echo ""
+            ;;
+    esac
+done

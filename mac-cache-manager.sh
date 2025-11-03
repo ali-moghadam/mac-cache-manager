@@ -86,23 +86,126 @@ CACHE_FOLDERS=(
     "$HOME/.node-gyp|USER"
     "$HOME/.thumbnails|USER"
 
+    # Xcode
     "$HOME/Library/Developer/Xcode/DerivedData|DEV"
     "$HOME/Library/Developer/Xcode/Archives|DEV"
-    "$HOME/Library/Developer/CoreSimulator|DEV"
+    "$HOME/Library/Developer/Xcode/DocumentationCache|DEV"
+    "$HOME/Library/Developer/Xcode/UserData|DEV"
+    "$HOME/Library/Developer/CoreSimulator/Devices|DEV"
+    "$HOME/Library/Developer/DeveloperDiskImages|DEV"
     "$HOME/Library/Developer/Xcode/iOS DeviceSupport|DEV"
+    "$HOME/Library/Developer/Xcode/tvOS DeviceSupport|DEV"
+    "$HOME/Library/Developer/Xcode/watchOS DeviceSupport|DEV"
+    "$HOME/Library/Developer/Xcode/macOS DeviceSupport|DEV"
+    "$HOME/Library/Caches/com.apple.dt.xcodebuild|DEV"
+    "$HOME/Library/Caches/com.apple.dt.Xcode.sourcecontrol.Git|DEV"
+
+    # VS Code
     "$HOME/Library/Application Support/Code/Cache|DEV"
     "$HOME/Library/Application Support/Code/CachedData|DEV"
     "$HOME/Library/Application Support/Code/CachedExtensions|DEV"
-    "$HOME/.gradle/caches|DEV"
-    "$HOME/.m2/repository|DEV"
-    "$HOME/Library/Caches/CocoaPods|DEV"
-    "~/.cocoapods|DEV"
+    "$HOME/Library/Application Support/Code/CachedExtensionVSIXs|DEV"
+    "$HOME/Library/Application Support/Code/CachedConfigurations|DEV"
+    "$HOME/Library/Application Support/Code/CachedProfilesData|DEV"
+    "$HOME/Library/Application Support/Code/GPUCache|DEV"
+    "$HOME/Library/Application Support/Code/Code Cache|DEV"
+    "$HOME/.vscode/extensions|DEV"
+    "$HOME/.vscode/cli|DEV"
+
+    # Cursor
+    "$HOME/Library/Application Support/Cursor/Cache|DEV"
+    "$HOME/Library/Application Support/Cursor/CachedData|DEV"
+    "$HOME/Library/Application Support/Cursor/CachedExtensions|DEV"
+    "$HOME/Library/Application Support/Cursor/CachedExtensionVSIXs|DEV"
+    "$HOME/Library/Application Support/Cursor/CachedConfigurations|DEV"
+    "$HOME/Library/Application Support/Cursor/CachedProfilesData|DEV"
+    "$HOME/Library/Application Support/Cursor/GPUCache|DEV"
+    "$HOME/Library/Application Support/Cursor/Code Cache|DEV"
+    "$HOME/.cursor/extensions|DEV"
+
+    # Zed
+    "$HOME/Library/Caches/Zed|DEV"
+    "$HOME/Library/Application Support/Zed|DEV"
+    "$HOME/Library/Application Support/Zed/node/cache|DEV"
+    "$HOME/.config/zed|DEV"
+
+    # JetBrains IDEs (IntelliJ IDEA, Android Studio, etc.)
+    "$HOME/Library/Application Support/JetBrains|DEV"
+    "$HOME/Library/Caches/JetBrains|DEV"
+    "$HOME/Library/Logs/JetBrains|DEV"
+
+    # Android Studio
     "$HOME/.android/build-cache|DEV"
     "$HOME/Library/Android/sdk/.temp|DEV"
+    "$HOME/Library/Logs/AndroidStudio|DEV"
+
+    # Gradle
+    "$HOME/.gradle/caches|DEV"
+    "$HOME/.gradle/wrapper|DEV"
+
+    # Maven
+    "$HOME/.m2|DEV"
+
+    # CocoaPods
+    "$HOME/Library/Caches/CocoaPods|DEV"
+    "$HOME/.cocoapods/repos|DEV"
+
+    # Carthage
+    "$HOME/Library/Caches/org.carthage.CarthageKit|DEV"
+
+    # Swift Package Manager
+    "$HOME/.swiftpm|DEV"
+
+    # Rust/Cargo
     "$HOME/.cargo/registry|DEV"
     "$HOME/.cargo/git|DEV"
 
+    # Go
+    "$HOME/go/pkg/mod|DEV"
+
+    # Python
+    "$HOME/Library/Caches/pypoetry|DEV"
+    "$HOME/Library/Application Support/pypoetry|DEV"
+    "$HOME/.pyenv/cache|DEV"
+    "$HOME/.cache/uv|DEV"
+    "$HOME/.config/uv|DEV"
+    "$HOME/.local/share/uv|DEV"
+
+    # Ruby
+    "$HOME/.gem|DEV"
+
+    # Node.js/JavaScript
+    "$HOME/.nvm|DEV"
+    "$HOME/Library/pnpm/store|DEV"
+    "$HOME/.cache/yarn|DEV"
+    "$HOME/.yarn-cache|DEV"
+    "$HOME/.yarn/global|DEV"
+
+    # Composer (PHP)
+    "$HOME/.composer/cache|DEV"
+
+    # Conda
+    "$HOME/.conda|DEV"
+    "$HOME/anaconda3|DEV"
+    "$HOME/miniconda3|DEV"
+
+    # Haskell Stack
+    "$HOME/.stack|DEV"
+    "$HOME/.stack/snapshots|DEV"
+
+    # Pub (Dart/Flutter)
+    "$HOME/.pub-cache|DEV"
+    "$HOME/Library/Caches/flutter_engine|DEV"
+
+    # Deno
+    "$HOME/Library/Caches/deno|DEV"
+
+    # Nix
+    "$HOME/.cache/nix|DEV"
+
+    # Docker
     "$HOME/Library/Containers/com.docker.docker/Data/vms|DEV"
+
     "$HOME/Library/Group Containers|DEV"
 
     "/Library/Caches|SYSTEM"

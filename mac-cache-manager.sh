@@ -2,37 +2,79 @@
 
 # Show help message
 show_help() {
-    echo "macOS Cache Manager"
+    SCRIPT_NAME=$(basename "$0")
+    
     echo ""
-    echo "Usage: $0 [OPTIONS]"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "                          🧹 macOS Cache Manager"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "Options:"
-    echo "  -h, --help              Show this help message"
-    echo "  -a, --accurate          Use accurate mode for precise size calculation (slower)"
-    echo "  -i, --ignore TYPE       Ignore specific cache type(s) from calculation"
-    echo "                          Can be specified multiple times or comma-separated"
-    echo "                          Valid types: USER, DEV, SYSTEM, TEMP, ANDROID"
-    echo "  -d, --debug             Enable debug mode (show detailed scanning and deletion output)"
+    printf "📖 \033[1mUSAGE\033[0m\n"
+    echo "   ./$SCRIPT_NAME [OPTIONS]"
     echo ""
-    echo "Description:"
-    echo "  This tool scans and helps you clean cache folders on your Mac."
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    printf "⚙️  \033[1mOPTIONS\033[0m\n"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "  Cache Categories:"
-    echo "    USER    → Application caches (browsers, npm, pip, yarn, etc.)"
-    echo "    DEV     → Development tools (Xcode, Gradle, Docker, VS Code, etc.)"
-    echo "    SYSTEM  → macOS system caches (requires admin privileges)"
-    echo "    TEMP    → Temporary files and logs"
-    echo "    ANDROID → Android Studio build folders"
+    printf "  \033[1;36m-h, --help\033[0m\n"
+    echo "     Show this help message"
     echo ""
-    echo "Examples:"
-    echo "  $0                      # Run in fast mode (default)"
-    echo "  $0 --accurate           # Run with precise size calculation"
-    echo "  $0 --ignore DEV         # Ignore DEV caches from calculation"
-    echo "  $0 -i DEV -i SYSTEM     # Ignore DEV and SYSTEM caches"
-    echo "  $0 -i DEV,ANDROID       # Ignore DEV and ANDROID caches (comma-separated)"
-    echo "  $0 -a -i DEV            # Accurate mode, ignoring DEV caches"
-    echo "  $0 --debug              # Run with debug output"
-    echo "  $0 -d -i ANDROID        # Debug mode, ignoring ANDROID caches"
+    printf "  \033[1;36m-a, --accurate\033[0m\n"
+    echo "     Use accurate mode for precise size calculation (slower)"
+    echo ""
+    printf "  \033[1;36m-s, --skip-calculation\033[0m\n"
+    echo "     Skip size calculation and show delete menu immediately"
+    echo ""
+    printf "  \033[1;36m-i, --ignore\033[0m TYPE\n"
+    echo "     Ignore specific cache type(s) from calculation"
+    echo "     Can be specified multiple times or comma-separated"
+    printf "     \033[2mValid types: USER, DEV, SYSTEM, TEMP, ANDROID\033[0m\n"
+    echo ""
+    printf "  \033[1;36m-d, --debug\033[0m\n"
+    echo "     Enable debug mode (show detailed scanning and deletion output)"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    printf "📁 \033[1mCACHE CATEGORIES\033[0m\n"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    printf "  \033[0;32m●\033[0m \033[1mUSER\033[0m    → Application caches (browsers, npm, pip, yarn, etc.)\n"
+    printf "  \033[0;34m●\033[0m \033[1mDEV\033[0m     → Development tools (Xcode, Gradle, Docker, VS Code, etc.)\n"
+    printf "  \033[0;31m●\033[0m \033[1mSYSTEM\033[0m  → macOS system caches (requires admin privileges)\n"
+    printf "  \033[0;33m●\033[0m \033[1mTEMP\033[0m    → Temporary files and logs\n"
+    printf "  \033[0;35m●\033[0m \033[1mANDROID\033[0m → Android Studio build folders\n"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    printf "💡 \033[1mEXAMPLES\033[0m\n"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    printf "  \033[2m# Run in fast mode (default)\033[0m\n"
+    echo "  ./$SCRIPT_NAME"
+    echo ""
+    printf "  \033[2m# Run with precise size calculation\033[0m\n"
+    echo "  ./$SCRIPT_NAME --accurate"
+    echo ""
+    printf "  \033[2m# Skip size calculation, show delete menu only\033[0m\n"
+    echo "  ./$SCRIPT_NAME --skip-calculation"
+    echo ""
+    printf "  \033[2m# Skip calculation and ignore DEV caches\033[0m\n"
+    echo "  ./$SCRIPT_NAME -s -i DEV"
+    echo ""
+    printf "  \033[2m# Ignore DEV caches from calculation\033[0m\n"
+    echo "  ./$SCRIPT_NAME --ignore DEV"
+    echo ""
+    printf "  \033[2m# Ignore multiple cache types\033[0m\n"
+    echo "  ./$SCRIPT_NAME -i DEV -i SYSTEM"
+    echo "  ./$SCRIPT_NAME -i DEV,ANDROID"
+    echo ""
+    printf "  \033[2m# Accurate mode with ignored types\033[0m\n"
+    echo "  ./$SCRIPT_NAME -a -i DEV"
+    echo ""
+    printf "  \033[2m# Debug mode\033[0m\n"
+    echo "  ./$SCRIPT_NAME --debug"
+    echo "  ./$SCRIPT_NAME -d -i ANDROID"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
     exit 0
 }
 
@@ -40,6 +82,7 @@ show_help() {
 FAST_MODE=true
 IGNORE_TYPES=()
 DEBUG_MODE=false
+SKIP_CALCULATION=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -48,6 +91,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -a|--accurate)
             FAST_MODE=false
+            shift
+            ;;
+        -s|--skip-calculation)
+            SKIP_CALCULATION=true
             shift
             ;;
         -d|--debug)
@@ -124,6 +171,10 @@ fi
 
 if [ ${#IGNORE_TYPES[@]} -gt 0 ]; then
     printf "🚫 Ignoring cache types: ${IGNORE_TYPES[*]}\n"
+fi
+
+if [ "$SKIP_CALCULATION" = true ]; then
+    printf "⏭️  Skipping size calculation\n"
 fi
 
 if [ "$DEBUG_MODE" = true ]; then
@@ -314,15 +365,24 @@ fi
 # Clear temp file
 > /tmp/cache_list.txt
 
-echo ""
-echo "🔢 Calculating sizes of existing cache folders..."
-echo "----------------------------"
-# Print header
-printf "%-3s %-80s %-10s %-10s\n" "No." "Folder" "Type" "Size"
-echo "--------------------------------------------------------------------------------"
+if [ "$SKIP_CALCULATION" = false ]; then
+    echo ""
+    echo "🔢 Calculating sizes of existing cache folders..."
+    echo "----------------------------"
+    # Print header
+    printf "%-3s %-80s %-10s %-10s\n" "No." "Folder" "Type" "Size"
+    echo "--------------------------------------------------------------------------------"
 
-# Start timer
-START_TIME=$(date +%s)
+    # Start timer
+    START_TIME=$(date +%s)
+else
+    echo ""
+    echo "⏭️  Skipping size calculation - listing folders only..."
+    echo "----------------------------"
+    # Print header
+    printf "%-3s %-80s %-10s\n" "No." "Folder" "Type"
+    echo "--------------------------------------------------------------------------------"
+fi
 
 FOLDERS_WITH_SIZE=()
 FOLDERS_SIZE_HR=()
@@ -348,10 +408,17 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
         *) color="$NC" ;;
     esac
     
-    # Print row with loading indicator on the same line (no newline)
-    printf "%-3s %-80s ${color}%-10s${NC} %-10s\r" "$index" "$folder" "$type" "⏳⏳"
+    if [ "$SKIP_CALCULATION" = true ]; then
+        # Skip size calculation, just list folders
+        printf "%-3s %-80s ${color}%-10s${NC}\n" "$index" "$folder" "$type"
+        size_hr="N/A"
+        size_bytes=0
+    else
+        # Normal size calculation
+        # Print row with loading indicator on the same line (no newline)
+        printf "%-3s %-80s ${color}%-10s${NC} %-10s\r" "$index" "$folder" "$type" "⏳⏳"
 
-    if [ "$type" = "ANDROID" ]; then
+        if [ "$type" = "ANDROID" ]; then
         # Calculate total size of all build folders inside this Android project directory
         TOTAL_ANDROID_BYTES=0
         if [ "$DEBUG_MODE" = true ]; then
@@ -409,6 +476,7 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
                 size_bytes=0
             fi
         fi
+        fi
     fi
 
     TOTAL_BYTES=$((TOTAL_BYTES + size_bytes))
@@ -425,8 +493,10 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
     FOLDERS_WITH_SIZE+=("$folder")
     FOLDERS_SIZE_HR+=("$size_hr")
     
-    # Clear entire line and print the final result with proper spacing
-    printf "\r%-3s %-80s ${color}%-10s${NC} %-10s\n" "$index" "$folder" "$type" "$size_hr"
+    if [ "$SKIP_CALCULATION" = false ]; then
+        # Clear entire line and print the final result with proper spacing
+        printf "\r%-3s %-80s ${color}%-10s${NC} %-10s\n" "$index" "$folder" "$type" "$size_hr"
+    fi
     
     # Save to temp file for deletion menu
     echo "$folder|$type" >> /tmp/cache_list.txt
@@ -434,32 +504,46 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
     index=$((index + 1))
 done
 
-# Convert total bytes to human-readable
-TOTAL_HR=$(bytes_to_human $TOTAL_BYTES)
-
 echo "----------------------------"
-echo "💾 Total cache size: $TOTAL_HR"
 
-# Calculate and display duration
-END_TIME=$(date +%s)
-DURATION=$((END_TIME - START_TIME))
-if [ $DURATION -ge 60 ]; then
-    MINUTES=$((DURATION / 60))
-    SECONDS=$((DURATION % 60))
-    echo "⏱️  Calculation time: ${MINUTES}m ${SECONDS}s"
+if [ "$SKIP_CALCULATION" = false ]; then
+    # Convert total bytes to human-readable
+    TOTAL_HR=$(bytes_to_human $TOTAL_BYTES)
+    echo "💾 Total cache size: $TOTAL_HR"
+
+    # Calculate and display duration
+    END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
+    if [ $DURATION -ge 60 ]; then
+        MINUTES=$((DURATION / 60))
+        SECONDS=$((DURATION % 60))
+        echo "⏱️  Calculation time: ${MINUTES}m ${SECONDS}s"
+    else
+        echo "⏱️  Calculation time: ${DURATION}s"
+    fi
+    echo "----------------------------"
 else
-    echo "⏱️  Calculation time: ${DURATION}s"
+    echo "📋 Total folders found: ${#EXISTING_FOLDERS[@]}"
+    echo "----------------------------"
 fi
-
-echo "----------------------------"
 echo ""
 
-# Convert type totals to human-readable
-USER_HR=$(bytes_to_human $USER_BYTES)
-DEV_HR=$(bytes_to_human $DEV_BYTES)
-SYSTEM_HR=$(bytes_to_human $SYSTEM_BYTES)
-TEMP_HR=$(bytes_to_human $TEMP_BYTES)
-ANDROID_HR=$(bytes_to_human $ANDROID_BYTES)
+# Convert type totals to human-readable (only if calculation was done)
+if [ "$SKIP_CALCULATION" = false ]; then
+    USER_HR=$(bytes_to_human $USER_BYTES)
+    DEV_HR=$(bytes_to_human $DEV_BYTES)
+    SYSTEM_HR=$(bytes_to_human $SYSTEM_BYTES)
+    TEMP_HR=$(bytes_to_human $TEMP_BYTES)
+    ANDROID_HR=$(bytes_to_human $ANDROID_BYTES)
+    TOTAL_HR=$(bytes_to_human $TOTAL_BYTES)
+else
+    USER_HR="?"
+    DEV_HR="?"
+    SYSTEM_HR="?"
+    TEMP_HR="?"
+    ANDROID_HR="?"
+    TOTAL_HR="?"
+fi
 
 # Helper function to check if a type is ignored
 is_type_ignored() {

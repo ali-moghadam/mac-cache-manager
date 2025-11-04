@@ -90,6 +90,28 @@ This is useful when you want to:
 - Speed up scanning by excluding large folders
 - Avoid accidentally deleting certain cache types
 
+### Skip Size Calculation
+
+Skip size calculation entirely and show delete menu immediately:
+
+```bash
+# Skip calculation (fastest)
+bash mac-cache-manager.sh --skip-calculation
+
+# Combine with ignore
+bash mac-cache-manager.sh -s -i DEV
+
+# Useful when you know what to delete
+bash mac-cache-manager.sh --skip-calculation --ignore SYSTEM,TEMP
+```
+
+This mode:
+- Lists all cache folders without calculating sizes
+- Shows delete menu immediately
+- Perfect for when you know what to delete
+- Bypasses slow Android build folder scanning
+- Sizes shown as "?" in menu since they weren't calculated
+
 ### Debug Mode
 
 Enable detailed debug output to troubleshoot performance issues:
@@ -120,6 +142,7 @@ This is useful for:
 
 - `-h`, `--help` - Show help message
 - `-a`, `--accurate` - Use accurate mode for precise size calculation (slower)
+- `-s`, `--skip-calculation` - Skip size calculation and show delete menu immediately
 - `-d`, `--debug` - Enable debug mode for detailed output
 - `-i`, `--ignore TYPE` - Ignore specific cache type(s) from calculation
   - Can be specified multiple times or comma-separated
@@ -209,6 +232,12 @@ Choose an option (A/1-28/U/S/T/Q):
 ```
 
 ### Example Workflows
+
+#### Quick Delete Without Calculation
+```bash
+bash mac-cache-manager.sh --skip-calculation
+# Instantly shows folders and delete menu, bypasses slow size calculation
+```
 
 #### Debug Slow Android Scanning
 ```bash

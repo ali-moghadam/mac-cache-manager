@@ -138,6 +138,13 @@ NC='\033[0m'         # No Color
 # Function to convert bytes to human-readable format
 bytes_to_human() {
     local bytes=$1
+    
+    # Handle empty or non-numeric input
+    if [ -z "$bytes" ] || ! [[ "$bytes" =~ ^[0-9]+$ ]]; then
+        echo "0B"
+        return
+    fi
+    
     if [ $bytes -ge 1073741824 ]; then
         echo "$(echo "scale=2; $bytes/1073741824" | bc)G"
     elif [ $bytes -ge 1048576 ]; then
@@ -451,16 +458,37 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
             if [ "$DEBUG_MODE" = true ]; then
                 echo "[DEBUG] Scanning Android project: $folder" >&2
             fi
-            for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
+            # Find all build directories and process them
+            # Use a temp file to store the list of build directories
+            TEMP_BUILD_LIST=$(mktemp)
+            find "$folder" -type d -name build -print0 2>/dev/null > "$TEMP_BUILD_LIST"
+            
+            while IFS= read -r -d '' build_dir; do
+                # Skip if the path is exactly the project root (defensive check)
+                if [ "$build_dir" = "$folder" ]; then
+                    if [ "$DEBUG_MODE" = true ]; then
+                        echo "[DEBUG]   Skipping root folder: $build_dir" >&2
+                    fi
+                    continue
+                fi
+                
                 if [ "$DEBUG_MODE" = true ]; then
                     echo "[DEBUG]   Found build folder: $build_dir" >&2
                 fi
                 size_bytes=$(du -sk "$build_dir" 2>/dev/null | awk '{print $1*1024}')
+                
+                # Handle empty or invalid size_bytes
+                if [ -z "$size_bytes" ] || ! [[ "$size_bytes" =~ ^[0-9]+$ ]]; then
+                    size_bytes=0
+                fi
+                
                 if [ "$DEBUG_MODE" = true ]; then
                     echo "[DEBUG]   Build folder size: $size_bytes bytes ($(bytes_to_human $size_bytes))" >&2
                 fi
                 TOTAL_ANDROID_BYTES=$((TOTAL_ANDROID_BYTES + size_bytes))
-            done
+            done < "$TEMP_BUILD_LIST"
+            
+            rm -f "$TEMP_BUILD_LIST"
             size_bytes=$TOTAL_ANDROID_BYTES
             if [ "$DEBUG_MODE" = true ]; then
                 echo "[DEBUG] Total Android size: $TOTAL_ANDROID_BYTES bytes ($(bytes_to_human $TOTAL_ANDROID_BYTES))" >&2
@@ -693,9 +721,15 @@ while true; do
                         printf -- "Deleting ${color_code}%s\033[0m...\n" "$folder"
                         if [ "$target" = "ANDROID" ]; then
                             # Delete all build folders in Android projects
-                            for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
-                                delete_with_status "$build_dir" "build folder"
-                            done
+                            TEMP_BUILD_LIST=$(mktemp)
+                            find "$folder" -type d -name build -print0 2>/dev/null > "$TEMP_BUILD_LIST"
+                            while IFS= read -r -d '' build_dir; do
+                                # Skip if the path is exactly the project root
+                                if [ "$build_dir" != "$folder" ]; then
+                                    delete_with_status "$build_dir" "build folder"
+                                fi
+                            done < "$TEMP_BUILD_LIST"
+                            rm -f "$TEMP_BUILD_LIST"
                         else
                             delete_with_status "$folder"
                         fi
@@ -733,9 +767,15 @@ while true; do
                     if [ "$type" = "ANDROID" ]; then
                         # Delete all build folders in Android projects
                         printf -- "Deleting ${color_code}%s\033[0m (build folders)...\n" "$folder"
-                        for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
-                            delete_with_status "$build_dir" "build folder"
-                        done
+                        TEMP_BUILD_LIST=$(mktemp)
+                        find "$folder" -type d -name build -print0 2>/dev/null > "$TEMP_BUILD_LIST"
+                        while IFS= read -r -d '' build_dir; do
+                            # Skip if the path is exactly the project root
+                            if [ "$build_dir" != "$folder" ]; then
+                                delete_with_status "$build_dir" "build folder"
+                            fi
+                        done < "$TEMP_BUILD_LIST"
+                        rm -f "$TEMP_BUILD_LIST"
                     else
                         printf -- "Deleting ${color_code}%s\033[0m...\n" "$folder"
                         delete_with_status "$folder"

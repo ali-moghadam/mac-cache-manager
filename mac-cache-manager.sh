@@ -149,6 +149,33 @@ bytes_to_human() {
     fi
 }
 
+# Function to delete a folder/file with debug output
+delete_with_status() {
+    local target_path=$1
+    local description=$2  # Optional: e.g., "build folder", "folder", etc.
+    
+    if [ "$DEBUG_MODE" = true ]; then
+        if [ -n "$description" ]; then
+            echo "[DEBUG]   Deleting $description: $target_path" >&2
+        else
+            echo "[DEBUG]   Deleting: $target_path" >&2
+        fi
+    fi
+    
+    if [ "$DEBUG_MODE" = true ]; then
+        if sudo rm -rf "$target_path" 2>/dev/null; then
+            echo "[DEBUG]   ✅ Successfully deleted" >&2
+            return 0
+        else
+            echo "[DEBUG]   ❌ Failed to delete" >&2
+            return 1
+        fi
+    else
+        sudo rm -rf "$target_path"
+        return $?
+    fi
+}
+
 # Guide
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -419,63 +446,53 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
         printf "%-3s %-80s ${color}%-10s${NC} %-10s\r" "$index" "$folder" "$type" "⏳⏳"
 
         if [ "$type" = "ANDROID" ]; then
-        # Calculate total size of all build folders inside this Android project directory
-        TOTAL_ANDROID_BYTES=0
-        if [ "$DEBUG_MODE" = true ]; then
-            echo "[DEBUG] Scanning Android project: $folder" >&2
-        fi
-        for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
+            # Calculate total size of all build folders inside this Android project directory
+            TOTAL_ANDROID_BYTES=0
             if [ "$DEBUG_MODE" = true ]; then
-                echo "[DEBUG]   Found build folder: $build_dir" >&2
+                echo "[DEBUG] Scanning Android project: $folder" >&2
             fi
-            size_bytes=$(du -sk "$build_dir" 2>/dev/null | awk '{print $1*1024}')
-            if [ "$DEBUG_MODE" = true ]; then
-                echo "[DEBUG]   Build folder size: $size_bytes bytes ($(bytes_to_human $size_bytes))" >&2
-            fi
-            TOTAL_ANDROID_BYTES=$((TOTAL_ANDROID_BYTES + size_bytes))
-        done
-        size_bytes=$TOTAL_ANDROID_BYTES
-        if [ "$DEBUG_MODE" = true ]; then
-            echo "[DEBUG] Total Android size: $TOTAL_ANDROID_BYTES bytes ($(bytes_to_human $TOTAL_ANDROID_BYTES))" >&2
-        fi
-
-        # Human-readable
-        size_hr=$(bytes_to_human $TOTAL_ANDROID_BYTES)
-    else
-        # Normal folder
-        if [ "$DEBUG_MODE" = true ]; then
-            echo "[DEBUG] Scanning folder: $folder" >&2
-        fi
-        if [ "$FAST_MODE" = true ]; then
-            # Fast mode - single du call
-            size_kb=$(du -sk "$folder" 2>/dev/null | awk '{print $1}')
-            
-            if [ -n "$size_kb" ]; then
-                size_bytes=$((size_kb * 1024))
+            for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
                 if [ "$DEBUG_MODE" = true ]; then
-                    echo "[DEBUG]   Size: $size_bytes bytes ($(bytes_to_human $size_bytes))" >&2
+                    echo "[DEBUG]   Found build folder: $build_dir" >&2
                 fi
-                
-                # Convert to human-readable
-                size_hr=$(bytes_to_human $size_bytes)
-            else
-                size_hr="N/A"
-                size_bytes=0
+                size_bytes=$(du -sk "$build_dir" 2>/dev/null | awk '{print $1*1024}')
+                if [ "$DEBUG_MODE" = true ]; then
+                    echo "[DEBUG]   Build folder size: $size_bytes bytes ($(bytes_to_human $size_bytes))" >&2
+                fi
+                TOTAL_ANDROID_BYTES=$((TOTAL_ANDROID_BYTES + size_bytes))
+            done
+            size_bytes=$TOTAL_ANDROID_BYTES
+            if [ "$DEBUG_MODE" = true ]; then
+                echo "[DEBUG] Total Android size: $TOTAL_ANDROID_BYTES bytes ($(bytes_to_human $TOTAL_ANDROID_BYTES))" >&2
             fi
+
+            # Human-readable
+            size_hr=$(bytes_to_human $TOTAL_ANDROID_BYTES)
         else
-            # Accurate mode - use du -sh for system's formatting
-            size_hr=$(du -sh "$folder" 2>/dev/null | awk '{print $1}')
-            size_bytes=$(du -sk "$folder" 2>/dev/null | awk '{print $1*1024}')
-            
-            if [ "$DEBUG_MODE" = true ] && [ -n "$size_bytes" ] && [ $size_bytes -gt 0 ]; then
-                echo "[DEBUG]   Size: $size_bytes bytes ($(bytes_to_human $size_bytes))" >&2
+            # Normal folder
+            if [ "$FAST_MODE" = true ]; then
+                # Fast mode - single du call
+                size_kb=$(du -sk "$folder" 2>/dev/null | awk '{print $1}')
+                
+                if [ -n "$size_kb" ]; then
+                    size_bytes=$((size_kb * 1024))
+                    
+                    # Convert to human-readable
+                    size_hr=$(bytes_to_human $size_bytes)
+                else
+                    size_hr="N/A"
+                    size_bytes=0
+                fi
+            else
+                # Accurate mode - use du -sh for system's formatting
+                size_hr=$(du -sh "$folder" 2>/dev/null | awk '{print $1}')
+                size_bytes=$(du -sk "$folder" 2>/dev/null | awk '{print $1*1024}')
+                
+                if [ -z "$size_hr" ] || [ -z "$size_bytes" ]; then
+                    size_hr="N/A"
+                    size_bytes=0
+                fi
             fi
-            
-            if [ -z "$size_hr" ] || [ -z "$size_bytes" ]; then
-                size_hr="N/A"
-                size_bytes=0
-            fi
-        fi
         fi
     fi
 
@@ -495,7 +512,11 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
     
     if [ "$SKIP_CALCULATION" = false ]; then
         # Clear entire line and print the final result with proper spacing
-        printf "\r%-3s %-80s ${color}%-10s${NC} %-10s\n" "$index" "$folder" "$type" "$size_hr"
+        if [ "$DEBUG_MODE" = true ] && [ -n "$size_bytes" ] && [ $size_bytes -gt 0 ]; then
+            printf "\r%-3s %-80s ${color}%-10s${NC} %-10s (%s bytes)\n" "$index" "$folder" "$type" "$size_hr" "$size_bytes"
+        else
+            printf "\r%-3s %-80s ${color}%-10s${NC} %-10s\n" "$index" "$folder" "$type" "$size_hr"
+        fi
     fi
     
     # Save to temp file for deletion menu
@@ -629,10 +650,7 @@ while true; do
                         echo "[DEBUG] Deleting folder: $folder (type: $type)" >&2
                     fi
                     echo "Deleting $folder..."
-                    sudo rm -rf "$folder"
-                    if [ "$DEBUG_MODE" = true ]; then
-                        echo "[DEBUG]   Deletion complete" >&2
-                    fi
+                    delete_with_status "$folder"
                 done < /tmp/cache_list.txt
                 echo "✅ All cache folders deleted."
                 echo ""
@@ -676,19 +694,10 @@ while true; do
                         if [ "$target" = "ANDROID" ]; then
                             # Delete all build folders in Android projects
                             for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
-                                if [ "$DEBUG_MODE" = true ]; then
-                                    echo "[DEBUG]   Deleting build folder: $build_dir" >&2
-                                fi
-                                sudo rm -rf "$build_dir"
-                                if [ "$DEBUG_MODE" = true ]; then
-                                    echo "[DEBUG]   Build folder deleted" >&2
-                                fi
+                                delete_with_status "$build_dir" "build folder"
                             done
                         else
-                            sudo rm -rf "$folder"
-                            if [ "$DEBUG_MODE" = true ]; then
-                                echo "[DEBUG]   Deletion complete" >&2
-                            fi
+                            delete_with_status "$folder"
                         fi
                     fi
                 done < /tmp/cache_list.txt
@@ -725,20 +734,11 @@ while true; do
                         # Delete all build folders in Android projects
                         printf -- "Deleting ${color_code}%s\033[0m (build folders)...\n" "$folder"
                         for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
-                            if [ "$DEBUG_MODE" = true ]; then
-                                echo "[DEBUG]   Deleting build folder: $build_dir" >&2
-                            fi
-                            sudo rm -rf "$build_dir"
-                            if [ "$DEBUG_MODE" = true ]; then
-                                echo "[DEBUG]   Build folder deleted" >&2
-                            fi
+                            delete_with_status "$build_dir" "build folder"
                         done
                     else
                         printf -- "Deleting ${color_code}%s\033[0m...\n" "$folder"
-                        sudo rm -rf "$folder"
-                        if [ "$DEBUG_MODE" = true ]; then
-                            echo "[DEBUG]   Deletion complete" >&2
-                        fi
+                        delete_with_status "$folder"
                     fi
                     echo "✅ Deleted successfully."
                     echo ""

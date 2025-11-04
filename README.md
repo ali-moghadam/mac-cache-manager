@@ -90,10 +90,37 @@ This is useful when you want to:
 - Speed up scanning by excluding large folders
 - Avoid accidentally deleting certain cache types
 
+### Debug Mode
+
+Enable detailed debug output to troubleshoot performance issues:
+
+```bash
+# Run with debug mode
+bash mac-cache-manager.sh --debug
+
+# Combine with other flags
+bash mac-cache-manager.sh -d -i DEV
+bash mac-cache-manager.sh --debug --accurate
+```
+
+Debug mode shows:
+- Detailed folder scanning progress
+- Individual Android build folders being found
+- Size calculation for each folder
+- Each file/folder being deleted
+- Timing information for slow operations
+
+This is useful for:
+- Identifying slow scanning operations
+- Troubleshooting Android build folder detection
+- Understanding what's being deleted
+- Finding performance bottlenecks
+
 ## Command-Line Options
 
 - `-h`, `--help` - Show help message
 - `-a`, `--accurate` - Use accurate mode for precise size calculation (slower)
+- `-d`, `--debug` - Enable debug mode for detailed output
 - `-i`, `--ignore TYPE` - Ignore specific cache type(s) from calculation
   - Can be specified multiple times or comma-separated
   - Valid types: `USER`, `DEV`, `SYSTEM`, `TEMP`, `ANDROID`
@@ -182,6 +209,12 @@ Choose an option (A/1-28/U/S/T/Q):
 ```
 
 ### Example Workflows
+
+#### Debug Slow Android Scanning
+```bash
+bash mac-cache-manager.sh --debug
+# Shows each build folder found and its size calculation time
+```
 
 #### Ignore Development Caches
 ```bash

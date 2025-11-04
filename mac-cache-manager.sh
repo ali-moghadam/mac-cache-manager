@@ -12,6 +12,7 @@ show_help() {
     echo "  -i, --ignore TYPE       Ignore specific cache type(s) from calculation"
     echo "                          Can be specified multiple times or comma-separated"
     echo "                          Valid types: USER, DEV, SYSTEM, TEMP, ANDROID"
+    echo "  -d, --debug             Enable debug mode (show detailed scanning and deletion output)"
     echo ""
     echo "Description:"
     echo "  This tool scans and helps you clean cache folders on your Mac."
@@ -30,12 +31,15 @@ show_help() {
     echo "  $0 -i DEV -i SYSTEM     # Ignore DEV and SYSTEM caches"
     echo "  $0 -i DEV,ANDROID       # Ignore DEV and ANDROID caches (comma-separated)"
     echo "  $0 -a -i DEV            # Accurate mode, ignoring DEV caches"
+    echo "  $0 --debug              # Run with debug output"
+    echo "  $0 -d -i ANDROID        # Debug mode, ignoring ANDROID caches"
     exit 0
 }
 
 # Parse command line arguments
 FAST_MODE=true
 IGNORE_TYPES=()
+DEBUG_MODE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -44,6 +48,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -a|--accurate)
             FAST_MODE=false
+            shift
+            ;;
+        -d|--debug)
+            DEBUG_MODE=true
             shift
             ;;
         -i|--ignore)
@@ -80,6 +88,20 @@ YELLOW='\033[0;33m'  # Temp / misc
 MAGENTA='\033[0;35m' # Android Studio build
 NC='\033[0m'         # No Color
 
+# Function to convert bytes to human-readable format
+bytes_to_human() {
+    local bytes=$1
+    if [ $bytes -ge 1073741824 ]; then
+        echo "$(echo "scale=2; $bytes/1073741824" | bc)G"
+    elif [ $bytes -ge 1048576 ]; then
+        echo "$(echo "scale=2; $bytes/1048576" | bc)M"
+    elif [ $bytes -ge 1024 ]; then
+        echo "$(echo "scale=2; $bytes/1024" | bc)K"
+    else
+        echo "${bytes}B"
+    fi
+}
+
 # Guide
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -102,6 +124,10 @@ fi
 
 if [ ${#IGNORE_TYPES[@]} -gt 0 ]; then
     printf "🚫 Ignoring cache types: ${IGNORE_TYPES[*]}\n"
+fi
+
+if [ "$DEBUG_MODE" = true ]; then
+    printf "🐛 Debug mode enabled\n"
 fi
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -328,47 +354,43 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
     if [ "$type" = "ANDROID" ]; then
         # Calculate total size of all build folders inside this Android project directory
         TOTAL_ANDROID_BYTES=0
+        if [ "$DEBUG_MODE" = true ]; then
+            echo "[DEBUG] Scanning Android project: $folder" >&2
+        fi
         for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
+            if [ "$DEBUG_MODE" = true ]; then
+                echo "[DEBUG]   Found build folder: $build_dir" >&2
+            fi
             size_bytes=$(du -sk "$build_dir" 2>/dev/null | awk '{print $1*1024}')
+            if [ "$DEBUG_MODE" = true ]; then
+                echo "[DEBUG]   Build folder size: $size_bytes bytes ($(bytes_to_human $size_bytes))" >&2
+            fi
             TOTAL_ANDROID_BYTES=$((TOTAL_ANDROID_BYTES + size_bytes))
         done
         size_bytes=$TOTAL_ANDROID_BYTES
+        if [ "$DEBUG_MODE" = true ]; then
+            echo "[DEBUG] Total Android size: $TOTAL_ANDROID_BYTES bytes ($(bytes_to_human $TOTAL_ANDROID_BYTES))" >&2
+        fi
 
         # Human-readable
-        if [ $TOTAL_ANDROID_BYTES -ge 1073741824 ]; then
-            size_hr=$(echo "scale=2; $TOTAL_ANDROID_BYTES/1073741824" | bc)
-            size_hr="${size_hr}G"
-        elif [ $TOTAL_ANDROID_BYTES -ge 1048576 ]; then
-            size_hr=$(echo "scale=2; $TOTAL_ANDROID_BYTES/1048576" | bc)
-            size_hr="${size_hr}M"
-        elif [ $TOTAL_ANDROID_BYTES -ge 1024 ]; then
-            size_hr=$(echo "scale=2; $TOTAL_ANDROID_BYTES/1024" | bc)
-            size_hr="${size_hr}K"
-        else
-            size_hr="${TOTAL_ANDROID_BYTES}B"
-        fi
+        size_hr=$(bytes_to_human $TOTAL_ANDROID_BYTES)
     else
         # Normal folder
+        if [ "$DEBUG_MODE" = true ]; then
+            echo "[DEBUG] Scanning folder: $folder" >&2
+        fi
         if [ "$FAST_MODE" = true ]; then
             # Fast mode - single du call
             size_kb=$(du -sk "$folder" 2>/dev/null | awk '{print $1}')
             
             if [ -n "$size_kb" ]; then
                 size_bytes=$((size_kb * 1024))
+                if [ "$DEBUG_MODE" = true ]; then
+                    echo "[DEBUG]   Size: $size_bytes bytes ($(bytes_to_human $size_bytes))" >&2
+                fi
                 
                 # Convert to human-readable
-                if [ $size_bytes -ge 1073741824 ]; then
-                    size_hr=$(echo "scale=1; $size_bytes/1073741824" | bc)
-                    size_hr="${size_hr}G"
-                elif [ $size_bytes -ge 1048576 ]; then
-                    size_hr=$(echo "scale=1; $size_bytes/1048576" | bc)
-                    size_hr="${size_hr}M"
-                elif [ $size_bytes -ge 1024 ]; then
-                    size_hr=$(echo "scale=1; $size_bytes/1024" | bc)
-                    size_hr="${size_hr}K"
-                else
-                    size_hr="${size_bytes}B"
-                fi
+                size_hr=$(bytes_to_human $size_bytes)
             else
                 size_hr="N/A"
                 size_bytes=0
@@ -377,6 +399,10 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
             # Accurate mode - use du -sh for system's formatting
             size_hr=$(du -sh "$folder" 2>/dev/null | awk '{print $1}')
             size_bytes=$(du -sk "$folder" 2>/dev/null | awk '{print $1*1024}')
+            
+            if [ "$DEBUG_MODE" = true ] && [ -n "$size_bytes" ] && [ $size_bytes -gt 0 ]; then
+                echo "[DEBUG]   Size: $size_bytes bytes ($(bytes_to_human $size_bytes))" >&2
+            fi
             
             if [ -z "$size_hr" ] || [ -z "$size_bytes" ]; then
                 size_hr="N/A"
@@ -409,18 +435,7 @@ for i in "${!EXISTING_FOLDERS[@]}"; do
 done
 
 # Convert total bytes to human-readable
-if [ $TOTAL_BYTES -ge 1073741824 ]; then
-    TOTAL_HR=$(echo "scale=2; $TOTAL_BYTES/1073741824" | bc)
-    TOTAL_HR="${TOTAL_HR}G"
-elif [ $TOTAL_BYTES -ge 1048576 ]; then
-    TOTAL_HR=$(echo "scale=2; $TOTAL_BYTES/1048576" | bc)
-    TOTAL_HR="${TOTAL_HR}M"
-elif [ $TOTAL_BYTES -ge 1024 ]; then
-    TOTAL_HR=$(echo "scale=2; $TOTAL_BYTES/1024" | bc)
-    TOTAL_HR="${TOTAL_HR}K"
-else
-    TOTAL_HR="${TOTAL_BYTES}B"
-fi
+TOTAL_HR=$(bytes_to_human $TOTAL_BYTES)
 
 echo "----------------------------"
 echo "💾 Total cache size: $TOTAL_HR"
@@ -439,25 +454,12 @@ fi
 echo "----------------------------"
 echo ""
 
-# ─────────────── Convert type totals to human-readable ───────────────
-convert_size() {
-    local bytes=$1
-    if [ $bytes -ge 1073741824 ]; then
-        echo "$(echo "scale=1; $bytes/1073741824" | bc)G"
-    elif [ $bytes -ge 1048576 ]; then
-        echo "$(echo "scale=1; $bytes/1048576" | bc)M"
-    elif [ $bytes -ge 1024 ]; then
-        echo "$(echo "scale=1; $bytes/1024" | bc)K"
-    else
-        echo "${bytes}B"
-    fi
-}
-
-USER_HR=$(convert_size $USER_BYTES)
-DEV_HR=$(convert_size $DEV_BYTES)
-SYSTEM_HR=$(convert_size $SYSTEM_BYTES)
-TEMP_HR=$(convert_size $TEMP_BYTES)
-ANDROID_HR=$(convert_size $ANDROID_BYTES)
+# Convert type totals to human-readable
+USER_HR=$(bytes_to_human $USER_BYTES)
+DEV_HR=$(bytes_to_human $DEV_BYTES)
+SYSTEM_HR=$(bytes_to_human $SYSTEM_BYTES)
+TEMP_HR=$(bytes_to_human $TEMP_BYTES)
+ANDROID_HR=$(bytes_to_human $ANDROID_BYTES)
 
 # Helper function to check if a type is ignored
 is_type_ignored() {
@@ -539,8 +541,14 @@ while true; do
             read -p "⚠️  Delete ALL listed cache folders? (y/N): " confirm_all
             if [ "$confirm_all" = "y" ] || [ "$confirm_all" = "Y" ]; then
                 while IFS='|' read -r folder type; do
+                    if [ "$DEBUG_MODE" = true ]; then
+                        echo "[DEBUG] Deleting folder: $folder (type: $type)" >&2
+                    fi
                     echo "Deleting $folder..."
                     sudo rm -rf "$folder"
+                    if [ "$DEBUG_MODE" = true ]; then
+                        echo "[DEBUG]   Deletion complete" >&2
+                    fi
                 done < /tmp/cache_list.txt
                 echo "✅ All cache folders deleted."
                 echo ""
@@ -577,14 +585,26 @@ while true; do
                             ANDROID) color_code="\033[0;35m" ;;
                             *) color_code="" ;;
                         esac
+                        if [ "$DEBUG_MODE" = true ]; then
+                            echo "[DEBUG] Deleting $target cache: $folder" >&2
+                        fi
                         printf -- "Deleting ${color_code}%s\033[0m...\n" "$folder"
                         if [ "$target" = "ANDROID" ]; then
                             # Delete all build folders in Android projects
                             for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
+                                if [ "$DEBUG_MODE" = true ]; then
+                                    echo "[DEBUG]   Deleting build folder: $build_dir" >&2
+                                fi
                                 sudo rm -rf "$build_dir"
+                                if [ "$DEBUG_MODE" = true ]; then
+                                    echo "[DEBUG]   Build folder deleted" >&2
+                                fi
                             done
                         else
                             sudo rm -rf "$folder"
+                            if [ "$DEBUG_MODE" = true ]; then
+                                echo "[DEBUG]   Deletion complete" >&2
+                            fi
                         fi
                     fi
                 done < /tmp/cache_list.txt
@@ -614,15 +634,27 @@ while true; do
                 printf -- "⚠️  Delete ${color_code}%s\033[0m? (y/N): " "$folder"
                 read confirm_single
                 if [ "$confirm_single" = "y" ] || [ "$confirm_single" = "Y" ]; then
+                    if [ "$DEBUG_MODE" = true ]; then
+                        echo "[DEBUG] Deleting specific folder: $folder (type: $type)" >&2
+                    fi
                     if [ "$type" = "ANDROID" ]; then
                         # Delete all build folders in Android projects
                         printf -- "Deleting ${color_code}%s\033[0m (build folders)...\n" "$folder"
                         for build_dir in $(find "$folder" -type d -name build 2>/dev/null); do
+                            if [ "$DEBUG_MODE" = true ]; then
+                                echo "[DEBUG]   Deleting build folder: $build_dir" >&2
+                            fi
                             sudo rm -rf "$build_dir"
+                            if [ "$DEBUG_MODE" = true ]; then
+                                echo "[DEBUG]   Build folder deleted" >&2
+                            fi
                         done
                     else
                         printf -- "Deleting ${color_code}%s\033[0m...\n" "$folder"
                         sudo rm -rf "$folder"
+                        if [ "$DEBUG_MODE" = true ]; then
+                            echo "[DEBUG]   Deletion complete" >&2
+                        fi
                     fi
                     echo "✅ Deleted successfully."
                     echo ""
